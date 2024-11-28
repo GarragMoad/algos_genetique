@@ -2,10 +2,12 @@ package algorithmes;
 
 import java.util.ArrayList;
 
+import operateurs.croisement.Croisement_kpoints;
 import operateurs.selection.Selection_aleatoire;
 import operateurs.croisement.Croisement;
 import operateurs.croisement.Croisement_1point;
 import operateurs.selection.Selection;
+import operateurs.selection.Selection_tournoi;
 import problemes.Probleme;
 import representation.Gene;
 import representation.Solution;
@@ -47,58 +49,50 @@ public class Algorithme_genetique {
 			probleme.evaluer(population.get(i));
 		}
 
-		bestSolution = getBestSolution(population); 
+		bestSolution = getBestSolution(population);
 
-		Selection selection; 
+		Selection selection;
 
-		//Mutation mutation = new BitFlip(probaMutation);
-		
 		for (int generation = 1; generation < nb_generations; generation++) {
 
-	
-			selection = new Selection_aleatoire(population); 
-
+			// Utiliser la sélection par tournoi
+			selection = new Selection_tournoi(population, 3); // k = 3
 
 			populationFille = new ArrayList<Solution>();
 
-			for (int i = 0; i < taille_population; i +=2) {
+			for (int i = 0; i < taille_population; i += 2) {
 
 				Solution parent1 = selection.selectionner();
 				Solution parent2 = selection.selectionner();
 
-				Croisement croisement; 
-				croisement = new Croisement_1point(parent1, parent2, probaCroisement);
+				// Utiliser le croisement k-points
+				Croisement croisement = new Croisement_kpoints(parent1, parent2, probaCroisement, 3); // k = 3
 				croisement.croiser();
 
 				Solution enfant1 = croisement.getEnfant1();
 				Solution enfant2 = croisement.getEnfant2();
 
-				// Mutation
-				//enfant1 = mutation.muter(enfant1);
-				//enfant2 = mutation.muter(enfant2);
-				//
+				// Mutation (si nécessaire)
+				// enfant1 = mutation.muter(enfant1);
+				// enfant2 = mutation.muter(enfant2);
 
 				probleme.evaluer(enfant1);
 				probleme.evaluer(enfant2);
 
 				populationFille.add(enfant1);
 				populationFille.add(enfant2);
+			}
 
-			} 
-
-			remplacer();
+			remplacer_tournoi(3); // k = 3
 
 			Solution bestSolutionPopulationCourante = getBestSolution(population);
 
 			if (bestSolutionPopulationCourante.getF() > bestSolution.getF()) {
 				bestSolution = bestSolutionPopulationCourante;
 			}
-
 		}
 
 		return bestSolution;
-
-
 	}
 
 	public void genererPopulationInitiale() {
@@ -130,6 +124,22 @@ public class Algorithme_genetique {
 
 		for (int i = 0; i < populationFille.size(); i++) {
 			population.add(populationFille.get(i));
+		}
+	}
+
+	public void remplacer_tournoi(int k) {
+		ArrayList<Solution> population_melangee = new ArrayList<Solution>();
+
+		for (int i = 0; i < population.size(); i++) {
+			population_melangee.add(population.get(i));
+			population_melangee.add(populationFille.get(i));
+		}
+
+		population.clear();
+		Selection selection = new Selection_tournoi(population_melangee, k);
+
+		for (int i = 0; i < taille_population; i++) {
+			population.add(selection.selectionner());
 		}
 	}
 
@@ -171,6 +181,10 @@ public class Algorithme_genetique {
 
 		return best;
 
+	}
+	public void croiser_kpoints(Solution parent1, Solution parent2, double probaCroisement, int k) {
+		Croisement croisement = new Croisement_kpoints(parent1, parent2, probaCroisement, k);
+		croisement.croiser();
 	}
 
 }
